@@ -24,7 +24,28 @@ Dữ liệu nằm trong volume `dashboard-data`, nên không mất khi cập nh�
 
 Không dùng Docker: xem `deploy/sourcenext-dashboard.service` (systemd).
 
-## Lịch lấy dữ liệu
+## Deploy lên Vercel
+
+Trên Vercel không có tiến trình chạy nền và filesystem chỉ đọc, nên `server.mjs` không được dùng. Thay vào đó:
+
+| Việc | Cách làm trên Vercel |
+|---|---|
+| Trang tĩnh | `public/` (qua `outputDirectory` trong `vercel.json`) |
+| `/data/<id>.json` | `api/data.js` đọc từ Vercel Blob (private), chưa có thì dùng `seed-data/` |
+| Lấy dữ liệu từ Backlog | `api/cron.js`, Vercel Cron chạy `0 1 * * *` UTC (08:00 giờ VN, gói Hobby có thể lệch trong vòng 1 giờ) |
+| Đăng nhập | `middleware.js` (Basic Auth, dùng `BASIC_AUTH_USER`/`BASIC_AUTH_PASS`) |
+
+Các bước:
+
+1. `npm i -g vercel`, `vercel login`, rồi `vercel link` trong thư mục dự án.
+2. Tạo Blob store **private** (Dashboard, Storage, Create, Blob) và nối vào project. `BLOB_READ_WRITE_TOKEN` được đặt tự động.
+3. Đặt Environment Variables: `BACKLOG_SPACE`, `BACKLOG_API_KEY`, `CRON_SECRET` (chuỗi ngẫu nhiên dài), `BASIC_AUTH_USER`, `BASIC_AUTH_PASS`.
+4. `vercel --prod`.
+5. Chạy lấy dữ liệu lần đầu ngay, không chờ đến 08:00: `vercel crons run /api/cron`, rồi mở trang kiểm tra số liệu.
+
+Nếu không đặt `BASIC_AUTH_USER`, site mở công khai. Cron lỗi thì dữ liệu cũ trong Blob được giữ nguyên, lỗi xem ở Logs của function `api/cron`.
+
+## Lịch lấy dữ liệu (chạy bằng server.mjs, không áp dụng cho Vercel)
 
 - `server.mjs` tự kiểm tra mỗi 30 giây, đến các mốc trong `SYNC_TIMES` (theo múi giờ `TZ_NAME`, mặc định `Asia/Ho_Chi_Minh`) thì chạy `scripts/sync-backlog.mjs`. Múi giờ của máy chủ không ảnh hưởng.
 - Chỉ bật lịch khi có `BACKLOG_API_KEY`. Lần khởi động đầu cũng lấy dữ liệu một lần. Đặt `SYNC_ON_START=1` nếu muốn lấy mỗi lần khởi động lại.

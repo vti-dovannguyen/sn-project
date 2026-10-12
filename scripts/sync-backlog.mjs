@@ -116,7 +116,8 @@ async function writeAtomic(file, data) {
   await fs.rename(tmp, file);
 }
 
-export async function sync() {
+// write(name, data): nơi ghi tùy chọn (Vercel Blob). Bỏ trống thì ghi file vào DATA_DIR.
+export async function sync({write} = {}) {
   if (!KEY || (!SPACE && !ENV.BACKLOG_BASE_URL)) throw new Error('Thiếu BACKLOG_SPACE hoặc BACKLOG_API_KEY');
   const started = Date.now();
   const today = todayInTz();
@@ -170,12 +171,14 @@ export async function sync() {
   const users = await api(`/projects/${PROJECT_KEY}/users`);
   const members = users.map((u) => ({name: u.name, role: u.roleType === 1 ? 'Admin' : 'Member'})).sort((a, b) => a.name.localeCompare(b.name));
 
-  await fs.mkdir(OUT, {recursive: true});
-  await writeAtomic(path.join(OUT, 'issues.json'), issues);
-  await writeAtomic(path.join(OUT, 'flow.json'), flow);
-  await writeAtomic(path.join(OUT, 'snapshot.json'), snapshot);
-  await writeAtomic(path.join(OUT, 'members.json'), members);
-  await writeAtomic(path.join(OUT, 'meta.json'), {updated_at: new Date().toISOString(), issues: issues.length, seconds: Math.round((Date.now() - started) / 1000)});
+  const meta = {updated_at: new Date().toISOString(), issues: issues.length, seconds: Math.round((Date.now() - started) / 1000)};
+  const files = [['issues.json', issues], ['flow.json', flow], ['snapshot.json', snapshot], ['members.json', members], ['meta.json', meta]];
+  if (write) {
+    for (const [name, data] of files) await write(name, data);
+  } else {
+    await fs.mkdir(OUT, {recursive: true});
+    for (const [name, data] of files) await writeAtomic(path.join(OUT, name), data);
+  }
   log(`xong: ${issues.length} issue, ${members.length} member, ${Math.round((Date.now() - started) / 1000)} giây`);
   return {issues: issues.length};
 }

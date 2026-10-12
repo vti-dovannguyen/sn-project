@@ -5,6 +5,10 @@
   "type": "module",
   "description": "Dashboard theo dõi tiến độ release từ Backlog, tự lấy dữ liệu 3 lần mỗi ngày",
   "engines": {"node": ">=18"},
+  "dependencies": {
+    "@vercel/blob": "^2.0.0",
+    "@vercel/functions": "^3.0.0"
+  },
   "scripts": {
     "start": "node server.mjs",
     "sync": "node scripts/sync-backlog.mjs",

@@ -1,0 +1,13 @@
+{
+  "name": "sourcenext-release-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dashboard theo dõi tiến độ release từ Backlog, tự lấy dữ liệu 3 lần mỗi ngày",
+  "engines": {"node": ">=18"},
+  "scripts": {
+    "start": "node server.mjs",
+    "sync": "node scripts/sync-backlog.mjs",
+    "test:mock": "node test/mock-backlog.mjs"
+  }
+}

@@ -1,0 +1,4 @@
+# Nếu muốn dùng cron của hệ điều hành thay cho bộ lập lịch trong server.mjs
+# (khi đó đừng đặt BACKLOG_API_KEY cho server.mjs, chỉ đặt cho dòng cron).
+# Giờ máy chủ UTC: 01:00, 06:00, 11:00 UTC tương ứng 08:00, 13:00, 18:00 giờ Việt Nam.
+0 1,6,11 * * * cd /opt/sourcenext-dashboard && set -a && . ./.env && set +a && /usr/bin/node scripts/sync-backlog.mjs >> /var/log/sourcenext-sync.log 2>&1

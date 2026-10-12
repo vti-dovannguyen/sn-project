@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sourcenext EC Site: theo dõi tiến độ release</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="theme.css">
+<script src="vendor/d3.min.js"></script>
+<script src="dash-shim.js"></script>
+</head>
+<body>
+<div id="dash-root">
+<style>
+.pm{font-family:var(--font-anthropic-sans);color:var(--color-fg);max-width:1320px;margin-inline:auto;display:flex;flex-direction:column;gap:var(--cds-gap-md);position:relative}
+.pm *{box-sizing:border-box}
+.pm h1{font-family:var(--font-anthropic-serif);font-weight:400;font-size:var(--cds-font-size-title);margin:0;line-height:1.15;letter-spacing:-.01em}
+.pm h2{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);margin:0;line-height:1.3}
+.pm h3{font-size:var(--cds-font-size-caption);font-weight:var(--cds-font-weight-medium);margin:0 0 6px;color:var(--color-fg-muted);text-transform:uppercase;letter-spacing:.04em}
+.pm .hd{display:flex;flex-wrap:wrap;gap:var(--cds-gap-sm) var(--cds-gap-md);align-items:flex-end;justify-content:space-between}
+.pm .take{margin:6px 0 0;color:var(--color-fg);font-size:var(--cds-font-size-body);min-height:1.5em;max-width:80ch;line-height:1.5}
+.pm .note{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption);margin:2px 0 0;line-height:1.45}
+.pm .asof{display:inline-flex;align-items:center;gap:6px;font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);border:1px solid var(--color-border-line);border-radius:999px;padding:4px 12px;background:var(--color-panel)}
+.pm .asof::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--color-ok)}
+.pm .card{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:calc(var(--cds-radius) + 4px);padding:var(--cds-pad-lg);min-width:0}
+.pm .card>.ch{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
+.pm .filters{display:flex;flex-direction:column;gap:12px}
+.pm .frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10.5rem),1fr));gap:10px 12px;align-items:end}
+.pm .fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pm .fld>span{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--color-fg-muted)}
+.pm select,.pm input[type=date],.pm input[type=search],.pm input[type=number]{font:inherit;font-size:var(--cds-font-size-body);color:var(--color-fg);background:var(--color-bg);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);padding:7px 10px;width:100%;min-width:0;transition:border-color var(--cds-dur-slow)}
+.pm select:hover,.pm input:hover{border-color:var(--color-fg-muted)}
+.pm select:focus-visible,.pm input:focus-visible,.pm button:focus-visible,.pm a:focus-visible{outline:2px solid var(--color-fg);outline-offset:1px}
+.pm .seg{display:inline-flex;background:var(--color-bg);border:1px solid var(--color-border-line);border-radius:999px;padding:3px;gap:2px;width:fit-content}
+.pm .seg button{font:inherit;font-size:var(--cds-font-size-caption);background:transparent;color:var(--color-fg-muted);border:0;padding:5px 14px;cursor:pointer;border-radius:999px}
+.pm .seg button[aria-pressed=true]{background:var(--color-fg);color:var(--color-bg)}
+.pm .btn{font:inherit;font-size:var(--cds-font-size-caption);background:transparent;color:var(--color-fg);border:1px solid var(--color-border-line);border-radius:999px;padding:6px 14px;cursor:pointer}
+.pm .btn:hover{background:var(--color-bg)}
+.pm .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:0}
+.pm .chip{font:inherit;font-size:var(--cds-font-size-caption);display:inline-flex;gap:6px;align-items:center;border:1px solid var(--color-border-line);background:var(--color-bg);color:var(--color-fg);border-radius:999px;padding:3px 10px;cursor:pointer}
+.pm .chip b{font-weight:var(--cds-font-weight-medium);color:var(--color-fg-muted)}
+.pm .chip:hover{border-color:var(--color-bad)}
+.pm .tabbar{position:sticky;top:0;z-index:4;background:var(--color-bg);padding-top:4px}
+.pm .tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--color-border-line);padding-bottom:0}
+.pm .tabs button{font:inherit;font-size:var(--cds-font-size-body);background:transparent;color:var(--color-fg-muted);border:0;border-bottom:2px solid transparent;padding:9px 14px;cursor:pointer;margin-bottom:-1px;border-radius:var(--cds-radius) var(--cds-radius) 0 0}
+.pm .tabs button:hover{color:var(--color-fg);background:var(--color-panel)}
+.pm .tabs button[aria-selected=true]{color:var(--color-fg);border-bottom-color:var(--color-fg);font-weight:var(--cds-font-weight-medium)}
+.pm .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12.5rem),1fr));gap:var(--cds-gap-sm)}
+.pm .kpi{position:relative;overflow:hidden;padding-left:calc(var(--cds-pad-lg) + 4px)}
+.pm .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--acc,var(--color-border-line))}
+.pm .kpi.a1{--acc:var(--color-fg)}
+.pm .kpi.bad{--acc:var(--color-bad)}.pm .kpi.warn{--acc:var(--color-warn)}.pm .kpi.ok{--acc:var(--color-ok)}
+.pm .kpi .l{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.pm .kpi .v{font-family:var(--font-anthropic-serif);font-weight:400;font-size:calc(var(--cds-font-size-title) + 4px);line-height:1.1;margin:6px 0 4px;min-height:1.1em;font-variant-numeric:tabular-nums}
+.pm .kpi .s{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);min-height:1.3em;line-height:1.4}
+.pm .t-bad{color:var(--color-bad)}.pm .t-warn{color:var(--color-warn)}.pm .t-ok{color:var(--color-ok)}
+.pm .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,26rem),1fr));gap:var(--cds-gap-md)}
+.pm .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:var(--cds-gap-md)}
+.pm .chart{min-height:220px;position:relative}
+.pm .chart.tall{min-height:320px}
+.pm .legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);margin-bottom:8px}
+.pm .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.pm .rag{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr));gap:var(--cds-gap-sm)}
+.pm .rag .card{display:flex;gap:12px;align-items:flex-start;padding:var(--cds-pad-md)}
+.pm .rag .dot{width:12px;height:12px;border-radius:50%;margin-top:4px;flex:none;background:var(--color-fg-muted);box-shadow:0 0 0 4px color-mix(in srgb,var(--c,var(--color-fg-muted)) 18%,transparent)}
+.pm .rag .dot.red{background:var(--color-bad);--c:var(--color-bad)}.pm .rag .dot.amber{background:var(--color-warn);--c:var(--color-warn)}.pm .rag .dot.green{background:var(--color-ok);--c:var(--color-ok)}
+.pm .rag b{font-weight:var(--cds-font-weight-medium)}
+.pm .rag .why{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);margin-top:2px;min-height:2.6em;line-height:1.45}
+.pm .tw{max-height:440px;overflow:auto;border:1px solid var(--color-border-line);border-radius:var(--cds-radius)}
+.pm table{border-collapse:separate;border-spacing:0;width:100%;font-size:var(--cds-font-size-caption);font-variant-numeric:tabular-nums}
+.pm th{position:sticky;top:0;z-index:1;background:var(--color-panel);text-align:left;font-weight:var(--cds-font-weight-medium);padding:0;border-bottom:1px solid var(--color-border-line);white-space:nowrap;color:var(--color-fg-muted)}
+.pm th button{font:inherit;color:inherit;background:none;border:0;padding:9px 12px;cursor:pointer;width:100%;text-align:inherit}
+.pm th[aria-sort=ascending] button::after{content:" ↑"}.pm th[aria-sort=descending] button::after{content:" ↓"}
+.pm th[aria-sort=ascending],.pm th[aria-sort=descending]{color:var(--color-fg)}
+.pm td{padding:8px 12px;border-bottom:1px solid var(--color-border-line);vertical-align:middle}
+.pm tbody tr:last-child td{border-bottom:0}
+.pm tbody tr:hover td{background:color-mix(in srgb,var(--color-fg) 4%,transparent)}
+.pm td.n,.pm th.n{text-align:right}.pm th.n button{text-align:right}
+.pm td.sum{min-width:15rem;max-width:32rem;line-height:1.4}
+.pm tr.pick{cursor:pointer}
+.pm tr.on td{background:color-mix(in srgb,var(--color-fg) 12%,transparent)}
+.pm td.hot{color:var(--color-bad);font-weight:var(--cds-font-weight-medium)}
+.pm a.tk{color:var(--color-fg);font-weight:var(--cds-font-weight-medium);text-decoration:none;border-bottom:1px dotted var(--color-fg-muted);white-space:nowrap}
+.pm a.tk:hover{border-bottom-style:solid;color:var(--color-fg)}
+.pm a.tk::after{content:" ↗";font-size:10px;color:var(--color-fg-muted)}
+.pm .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;line-height:1.5;white-space:nowrap;background:color-mix(in srgb,var(--p,var(--color-fg-muted)) 14%,transparent);color:var(--p,var(--color-fg-muted));border:1px solid color-mix(in srgb,var(--p,var(--color-fg-muted)) 30%,transparent)}
+.pm .pill.p-prog{--p:var(--color-fg)}.pm .pill.p-res{--p:var(--color-ok)}.pm .pill.p-high{--p:var(--color-bad)}.pm .pill.p-open{--p:var(--color-fg-muted)}
+.pm .late{display:inline-block;min-width:2.2em;text-align:center;border-radius:6px;padding:1px 6px;background:color-mix(in srgb,var(--color-bad) 14%,transparent);color:var(--color-bad);font-weight:var(--cds-font-weight-medium)}
+.pm .late.mid{background:color-mix(in srgb,var(--color-warn) 16%,transparent);color:var(--color-warn)}
+.pm .toolbar{display:flex;flex-wrap:wrap;gap:var(--cds-gap-sm);align-items:center;justify-content:space-between;margin-bottom:10px}
+.pm .toolbar input[type=search]{width:min(100%,18rem)}
+.pm .empty-line{color:var(--color-fg-muted);font-size:var(--cds-font-size-caption);padding:14px 0;text-align:center}
+.pm .banner{border:1px dashed var(--color-border-line);border-radius:calc(var(--cds-radius) + 4px);padding:var(--cds-pad-md) var(--cds-pad-lg);font-size:var(--cds-font-size-caption);line-height:1.55;color:var(--color-fg-muted);background:var(--color-panel)}
+.pm .banner b{color:var(--color-fg);font-weight:var(--cds-font-weight-medium)}
+.pm .fail{display:flex;align-items:center;justify-content:center;gap:6px;min-height:inherit;color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)}
+.pm .fail::before{content:"";width:.375rem;height:.375rem;border-radius:50%;background:var(--color-bad)}
+.pm .sec{margin-top:var(--cds-gap-md)}
+.pm #tip{position:absolute;pointer-events:none;z-index:6;background:var(--cds-surface-popover);border:1px solid var(--cds-border);border-radius:var(--cds-radius);box-shadow:var(--cds-shadow-popover);padding:var(--cds-pad-xs) var(--cds-pad-sm);font-size:var(--cds-font-size-caption);display:none;max-width:20rem}
+.pm #tip .tt{color:var(--cds-text-secondary);margin-bottom:2px}
+.pm #tip .tl{display:flex;gap:6px;align-items:center}
+.pm #tip i{width:8px;height:8px;border-radius:2px;display:inline-block;flex:none}
+.pm details{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.pm details summary{cursor:pointer}
+.pm details ul{margin:6px 0 0;padding-left:18px;line-height:1.6}
+.pm svg .pick{cursor:pointer}
+[data-dash-source-state=refreshing]{opacity:.5;transition:opacity var(--cds-dur-slow)}
+[data-dash-source-state=empty]{color:transparent}
+@media (prefers-reduced-motion:no-preference){.pm section:not([hidden]){animation:pmfade var(--cds-dur-slow) var(--cds-ease-out)}@keyframes pmfade{from{opacity:.0}to{opacity:1}}}
+</style>
+
+<div class="pm" id="pm">
+  <header class="hd">
+    <div>
+      <h1 id="ttl">Sourcenext EC Site: theo dõi tiến độ release</h1>
+      <p class="take dash-skeleton" id="take" data-source="tasks flow snapshot"></p>
+    </div>
+    <span class="asof" id="asof" data-source="snapshot"></span>
+  </header>
+
+  <div class="card filters" id="filters">
+    <div class="frow">
+      <div class="fld"><span>Kỳ xem</span>
+        <div class="seg" role="group" aria-label="Phạm vi thời gian" id="grain">
+          <button type="button" data-grain="day">Ngày</button>
+          <button type="button" data-grain="week">Tuần</button>
+          <button type="button" data-grain="month">Tháng</button>
+        </div>
+      </div>
+      <label class="fld"><span>Ngày release</span><input type="date" id="rel" min="2000-01-01" max="2099-12-31" aria-label="Ngày release dự kiến"></label>
+      <label class="fld"><span>Member</span><select id="who" aria-label="Lọc theo member"></select></label>
+      <label class="fld"><span>Milestone</span><select id="f-ms" aria-label="Lọc theo milestone"></select></label>
+      <label class="fld"><span>Category</span><select id="f-cat" aria-label="Lọc theo category"></select></label>
+      <label class="fld"><span>Nhóm lỗi</span><select id="f-defect" aria-label="Lọc theo nhóm lỗi"></select></label>
+      <label class="fld"><span>Công đoạn phát hiện</span><select id="f-proc" aria-label="Lọc theo công đoạn phát hiện"></select></label>
+      <label class="fld"><span>Loại issue</span><select id="f-type" aria-label="Lọc theo loại issue"></select></label>
+      <label class="fld"><span>Ưu tiên</span><select id="f-prio" aria-label="Lọc theo ưu tiên"></select></label>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="tabbar">
+    <div class="tabs" role="tablist" id="tabs">
+      <button type="button" role="tab" data-tab="overview" id="tab-overview">Tổng quan</button>
+      <button type="button" role="tab" data-tab="deadline" id="tab-deadline">Deadline</button>
+      <button type="button" role="tab" data-tab="risk" id="tab-risk">Issue và rủi ro</button>
+      <button type="button" role="tab" data-tab="members" id="tab-members">Member</button>
+      <button type="button" role="tab" data-tab="logtime" id="tab-logtime">Logtime</button>
+      <button type="button" role="tab" data-tab="ot" id="tab-ot">Kế hoạch OT</button>
+    </div>
+  </div>
+
+  <!-- TỔNG QUAN -->
+  <section id="overview" hidden>
+    <div class="kpis" id="kpis" data-source="tasks flow snapshot">
+      <div class="card kpi a1"><div class="l">Việc đang mở</div><div class="v dash-skeleton" id="k1"></div><div class="s" id="k1s"></div></div>
+      <div class="card kpi" id="k2c"><div class="l">Quá hạn</div><div class="v dash-skeleton" id="k2"></div><div class="s" id="k2s"></div></div>
+      <div class="card kpi"><div class="l">Bug, issue và feedback mở</div><div class="v dash-skeleton" id="k3"></div><div class="s" id="k3s"></div></div>
+      <div class="card kpi"><div class="l">Resolved chờ đóng</div><div class="v dash-skeleton" id="k4"></div><div class="s" id="k4s"></div></div>
+      <div class="card kpi"><div class="l">Chưa gán người</div><div class="v dash-skeleton" id="k5"></div><div class="s" id="k5s"></div></div>
+      <div class="card kpi ok"><div class="l" id="k6l">Đã đóng trong kỳ</div><div class="v dash-skeleton" id="k6"></div><div class="s" id="k6s"></div></div>
+    </div>
+
+    <div class="rag sec" id="rag" data-source="tasks flow snapshot">
+      <div class="card"><span class="dot" id="r1d"></span><div><b>Tiến độ</b><div class="why dash-skeleton" id="r1t"></div></div></div>
+      <div class="card"><span class="dot" id="r2d"></span><div><b>Chất lượng</b><div class="why dash-skeleton" id="r2t"></div></div></div>
+      <div class="card"><span class="dot" id="r3d"></span><div><b>Nguồn lực và OT</b><div class="why dash-skeleton" id="r3t"></div></div></div>
+      <div class="card"><span class="dot" id="r4d"></span><div><b>Dữ liệu kế hoạch</b><div class="why dash-skeleton" id="r4t"></div></div></div>
+    </div>
+    <details style="margin-top:8px"><summary>Cách tính các đèn trạng thái</summary><ul id="rules"></ul></details>
+
+    <div class="grid2 sec">
+      <div class="card">
+        <div class="ch"><h2 id="flowT">Tạo mới và đóng theo tuần</h2><p class="note">Toàn dự án, không áp bộ lọc. Đóng tính theo ngày cập nhật cuối. Cột cuối là kỳ đang chạy.</p></div>
+        <div class="chart dash-skeleton" id="c-flow" data-source="flow"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h2>Tốc độ đóng so với tốc độ cần</h2><p class="note">Đường nét đứt là số việc cần đóng mỗi kỳ để kịp release. Đường liền thấp hơn nghĩa là đang chậm.</p></div>
+        <div class="chart dash-skeleton" id="c-pace" data-source="tasks flow"></div>
+      </div>
+    </div>
+    <div class="grid3 sec">
+      <div class="card">
+        <div class="ch"><h2>Trạng thái</h2><p class="note">Theo bộ lọc hiện tại. Bấm một phần để xem chi tiết.</p></div>
+        <div class="chart dash-skeleton" id="c-status" data-source="tasks"></div>
+      </div>
+      <div class="card" style="grid-column:span 2;min-width:0">
+        <div class="ch" style="flex-direction:row;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:8px">
+          <div><h2>Phân tích theo nhóm</h2><p class="note">Bấm một thanh để lọc cả dashboard theo nhóm đó.</p></div>
+          <label class="fld" style="width:12rem"><span>Nhóm theo</span><select id="dim" aria-label="Nhóm theo"></select></label>
+        </div>
+        <div class="chart tall dash-skeleton" id="c-dim" data-source="tasks"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEADLINE -->
+  <section id="deadline" hidden>
+    <div class="grid2">
+      <div class="card">
+        <div class="ch"><h2>Mức độ trễ hạn</h2><p class="note">Issue chưa xong và đã quá hạn, nhóm theo số ngày trễ tính đến ngày dữ liệu.</p></div>
+        <div class="chart dash-skeleton" id="c-aging" data-source="tasks"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h2>Lịch đến hạn sắp tới</h2><p class="note">Số issue chưa xong có hạn chót vào từng ngày tới. Đường nét đứt là ngày release.</p></div>
+        <div class="chart dash-skeleton" id="c-due" data-source="tasks"></div>
+      </div>
+    </div>
+    <div class="card sec">
+      <div class="toolbar"><div><h2 id="dueT">Đến hạn trong kỳ</h2><p class="note" id="dueN"></p></div></div>
+      <div class="tw"><table id="t-due" data-source="tasks" data-row-key="key">
+        <thead><tr><th data-field="key"><button type="button" data-f="key">Mã ticket</button></th><th data-field="summary"><button type="button" data-f="summary">Nội dung</button></th><th data-field="ass"><button type="button" data-f="ass">Người làm</button></th><th data-field="due"><button type="button" data-f="due">Hạn</button></th><th data-field="late" class="n"><button type="button" data-f="late">Ngày trễ</button></th><th data-field="status"><button type="button" data-f="status">Trạng thái</button></th><th data-field="priority"><button type="button" data-f="priority">Ưu tiên</button></th></tr></thead>
+        <tbody></tbody></table></div>
+      <div class="empty-line" id="dueE" hidden>Không có issue nào đến hạn trong kỳ này.</div>
+    </div>
+    <div class="card sec">
+      <div class="toolbar"><div><h2>Danh sách quá hạn</h2><p class="note">Sắp xếp theo số ngày trễ. Bấm mã ticket để mở trong Backlog, bấm tiêu đề cột để đổi thứ tự.</p></div><input type="search" id="q-over" placeholder="Tìm theo mã, nội dung, người làm" aria-label="Tìm trong danh sách quá hạn"></div>
+      <div class="tw"><table id="t-over" data-source="tasks" data-row-key="key">
+        <thead><tr><th data-field="key"><button type="button" data-f="key">Mã ticket</button></th><th data-field="summary"><button type="button" data-f="summary">Nội dung</button></th><th data-field="ass"><button type="button" data-f="ass">Người làm</button></th><th data-field="due"><button type="button" data-f="due">Hạn</button></th><th data-field="late" class="n"><button type="button" data-f="late">Ngày trễ</button></th><th data-field="status"><button type="button" data-f="status">Trạng thái</button></th><th data-field="priority"><button type="button" data-f="priority">Ưu tiên</button></th></tr></thead>
+        <tbody></tbody></table></div>
+      <div class="empty-line" id="overE" hidden>Không có issue quá hạn.</div>
+    </div>
+  </section>
+
+  <!-- ISSUE & RISK -->
+  <section id="risk" hidden>
+    <div class="kpis" id="rk" data-source="tasks snapshot">
+      <div class="card kpi a1"><div class="l">Bug, issue và feedback mở</div><div class="v dash-skeleton" id="b1"></div><div class="s" id="b1s"></div></div>
+      <div class="card kpi" id="b2c"><div class="l">Mức High</div><div class="v dash-skeleton" id="b2"></div><div class="s" id="b2s"></div></div>
+      <div class="card kpi ok"><div class="l">Tỷ lệ bug đã đóng</div><div class="v dash-skeleton" id="b3"></div><div class="s" id="b3s"></div></div>
+      <div class="card kpi"><div class="l">Phản hồi khách hàng mở</div><div class="v dash-skeleton" id="b4"></div><div class="s" id="b4s"></div></div>
+    </div>
+    <div class="grid2 sec">
+      <div class="card"><div class="ch"><h2>Bug đang mở theo nhóm lỗi</h2><p class="note">Theo trường Defect Category. Bấm một thanh để lọc theo nhóm lỗi.</p></div><div class="chart dash-skeleton" id="c-cat" data-source="tasks"></div></div>
+      <div class="card"><div class="ch"><h2>Bug đang mở theo công đoạn phát hiện</h2><p class="note">Theo trường Detected Process. Lỗi phát hiện càng muộn thì chi phí sửa càng cao.</p></div><div class="chart dash-skeleton" id="c-proc" data-source="tasks"></div></div>
+    </div>
+    <div class="card sec">
+      <div class="ch"><h2>Nhóm lỗi theo công đoạn phát hiện</h2><p class="note">Số bug đang mở ở mỗi cặp. Ô đậm là điểm nóng cần phân tích nguyên nhân gốc.</p></div>
+      <div class="chart dash-skeleton" id="c-heat" data-source="tasks"></div>
+    </div>
+    <div class="grid3 sec">
+      <div class="card"><div class="ch"><h2>Mức ưu tiên</h2><p class="note">Bug, issue và feedback đang mở.</p></div><div class="chart dash-skeleton" id="c-prio" data-source="tasks"></div></div>
+      <div class="card"><div class="ch"><h2>Resolved chờ đóng theo tuổi</h2><p class="note">Số ngày kể từ lần cập nhật cuối. Tồn lâu nghĩa là chưa ai xác nhận.</p></div><div class="chart dash-skeleton" id="c-res" data-source="tasks"></div></div>
+      <div class="card"><div class="ch"><h2>Bug mới theo tuần</h2><p class="note">Bug còn mở, nhóm theo tuần tạo.</p></div><div class="chart dash-skeleton" id="c-new" data-source="tasks"></div></div>
+    </div>
+    <div class="card sec">
+      <div class="toolbar"><div><h2>Rủi ro cần xử lý trước</h2><p class="note">Chỉ bug và feedback đang mở, chấm điểm: High +3, trễ hơn 14 ngày +3, trễ hạn +1, chưa gán +2, không cập nhật hơn 14 ngày +1, phản hồi khách hàng +1. Hiện tối đa 20 dòng điểm cao nhất.</p></div></div>
+      <div class="tw"><table id="t-risk" data-source="risks" data-row-key="key">
+        <thead><tr><th data-field="key"><button type="button" data-f="key">Mã ticket</button></th><th data-field="summary"><button type="button" data-f="summary">Nội dung</button></th><th data-field="assignee"><button type="button" data-f="assignee">Người làm</button></th><th data-field="priority"><button type="button" data-f="priority">Ưu tiên</button></th><th data-field="status"><button type="button" data-f="status">Trạng thái</button></th><th data-field="late" class="n"><button type="button" data-f="late">Ngày trễ</button></th><th data-field="score" class="n"><button type="button" data-f="score">Điểm</button></th><th data-field="flags"><button type="button" data-f="flags">Dấu hiệu</button></th></tr></thead>
+        <tbody></tbody></table></div>
+      <div class="empty-line" id="riskE" hidden>Không có rủi ro điểm cao.</div>
+    </div>
+  </section>
+
+  <!-- MEMBER -->
+  <section id="members" hidden>
+    <div class="kpis" id="mk" data-source="tasks members">
+      <div class="card kpi a1"><div class="l">Thành viên trong project</div><div class="v dash-skeleton" id="m1"></div><div class="s" id="m1s"></div></div>
+      <div class="card kpi"><div class="l">Đang có việc mở</div><div class="v dash-skeleton" id="m2"></div><div class="s" id="m2s"></div></div>
+      <div class="card kpi" id="m3c"><div class="l">Có việc quá hạn</div><div class="v dash-skeleton" id="m3"></div><div class="s" id="m3s"></div></div>
+      <div class="card kpi"><div class="l">Việc nhiều nhất ở một người</div><div class="v dash-skeleton" id="m4"></div><div class="s" id="m4s"></div></div>
+    </div>
+    <div class="grid2 sec">
+      <div class="card"><div class="ch"><h2>Khối lượng việc đang mở</h2><p class="note">15 người nhiều việc nhất theo bộ lọc. Bấm một thanh để lọc theo người đó.</p></div><div class="chart tall dash-skeleton" id="c-mem" data-source="tasks"></div></div>
+      <div class="card">
+        <div class="ch"><h2>Bảng member</h2><p class="note">Bấm một dòng để lọc cả dashboard theo người đó, bấm lần nữa để bỏ lọc.</p></div>
+        <div class="toolbar"><input type="search" id="q-mem" placeholder="Tìm member" aria-label="Tìm member"></div>
+        <div class="tw"><table id="t-mem">
+          <thead><tr><th><button type="button" data-f="name">Member</button></th><th><button type="button" data-f="role">Vai trò</button></th><th class="n"><button type="button" data-f="active">Đang mở</button></th><th class="n"><button type="button" data-f="in_progress">Đang làm</button></th><th class="n"><button type="button" data-f="overdue">Quá hạn</button></th><th class="n"><button type="button" data-f="defects">Bug và FB</button></th><th class="n"><button type="button" data-f="high">High</button></th><th class="n"><button type="button" data-f="resolved">Chờ đóng</button></th></tr></thead>
+          <tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGTIME -->
+  <section id="logtime" hidden>
+    <div class="banner" id="lt-note"></div>
+    <div class="kpis sec" id="lk" data-source="tasks">
+      <div class="card kpi a1"><div class="l">Giờ ước tính trên Backlog</div><div class="v dash-skeleton" id="l1"></div><div class="s" id="l1s"></div></div>
+      <div class="card kpi" id="l2c"><div class="l">Giờ thực tế đã log</div><div class="v dash-skeleton" id="l2"></div><div class="s" id="l2s"></div></div>
+      <div class="card kpi"><div class="l">Giờ cần theo giả định</div><div class="v dash-skeleton" id="l3"></div><div class="s" id="l3s"></div></div>
+      <div class="card kpi"><div class="l">Giờ làm khả dụng</div><div class="v dash-skeleton" id="l4"></div><div class="s" id="l4s"></div></div>
+      <div class="card kpi" id="l5c"><div class="l">Mức sử dụng</div><div class="v dash-skeleton" id="l5"></div><div class="s" id="l5s"></div></div>
+    </div>
+    <div class="card sec">
+      <div class="toolbar">
+        <div><h2>Giả định để quy đổi việc ra giờ</h2><p class="note">Issue chưa có giờ ước tính sẽ tính theo số giờ trung bình dưới đây. Đổi số để xem tải của từng người thay đổi ra sao.</p></div>
+        <label class="fld" style="width:11rem"><span>Giờ trung bình mỗi việc</span><input type="number" id="hpi" min="0.25" max="40" step="0.25" aria-label="Giờ trung bình mỗi việc"></label>
+      </div>
+    </div>
+    <div class="grid2 sec">
+      <div class="card"><div class="ch"><h2>Giờ cần so với giờ khả dụng</h2><p class="note">Đến ngày release. Thanh cần dài hơn thanh khả dụng nghĩa là quá tải.</p></div><div class="chart tall dash-skeleton" id="c-cap" data-source="tasks"></div></div>
+      <div class="card"><div class="ch"><h2>Hoạt động theo tuần</h2><p class="note">Số issue được cập nhật lần cuối trong tuần. Đây là chỉ báo gián tiếp về mức làm việc, không phải giờ log.</p></div><div class="chart tall dash-skeleton" id="c-act" data-source="tasks"></div></div>
+    </div>
+    <div class="card sec">
+      <div class="toolbar"><div><h2>Bảng logtime theo member</h2><p class="note" id="ltN"></p></div><input type="search" id="q-lt" placeholder="Tìm member" aria-label="Tìm member trong bảng logtime"></div>
+      <div class="tw"><table id="t-lt">
+        <thead><tr><th><button type="button" data-f="name">Member</button></th><th class="n"><button type="button" data-f="open">Việc phải xong</button></th><th class="n"><button type="button" data-f="est">Giờ ước tính</button></th><th class="n"><button type="button" data-f="act">Giờ đã log</button></th><th class="n"><button type="button" data-f="need">Giờ cần</button></th><th class="n"><button type="button" data-f="cap">Giờ khả dụng</button></th><th class="n"><button type="button" data-f="util">Mức sử dụng</button></th></tr></thead>
+        <tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- OT -->
+  <section id="ot" hidden>
+    <div class="banner"><b>Lưu ý về dữ liệu OT.</b> Backlog không lưu giờ OT đã đăng ký hay đã duyệt. Phần này là đề xuất ước tính từ khối lượng còn lại tới ngày release, để PM biết ai có nguy cơ phải làm thêm. Khi có file kế hoạch OT chính thức, có thể nối vào đây.</div>
+    <div class="kpis sec" id="ok" data-source="tasks flow">
+      <div class="card kpi a1"><div class="l">Ngày làm việc còn lại</div><div class="v dash-skeleton" id="o1"></div><div class="s" id="o1s"></div></div>
+      <div class="card kpi"><div class="l">Việc cần xong trước release</div><div class="v dash-skeleton" id="o2"></div><div class="s" id="o2s"></div></div>
+      <div class="card kpi" id="o3c"><div class="l">Cần mỗi ngày</div><div class="v dash-skeleton" id="o3"></div><div class="s" id="o3s"></div></div>
+      <div class="card kpi"><div class="l">Tốc độ đóng gần đây</div><div class="v dash-skeleton" id="o4"></div><div class="s" id="o4s"></div></div>
+      <div class="card kpi" id="o5c"><div class="l">Người cần OT</div><div class="v dash-skeleton" id="o5"></div><div class="s" id="o5s"></div></div>
+      <div class="card kpi"><div class="l">OT đề xuất</div><div class="v dash-skeleton" id="o6"></div><div class="s" id="o6s"></div></div>
+    </div>
+    <div class="card sec">
+      <div class="toolbar"><div><h2>Đề xuất OT theo member</h2><p class="note" id="otN"></p></div></div>
+      <div class="tw"><table id="t-ot">
+        <thead><tr><th><button type="button" data-f="name">Member</button></th><th class="n"><button type="button" data-f="scope">Việc phải xong</button></th><th class="n"><button type="button" data-f="perday">Việc mỗi ngày</button></th><th class="n"><button type="button" data-f="hours">OT cần (giờ)</button></th><th class="n"><button type="button" data-f="maxh">OT tối đa (giờ)</button></th><th><button type="button" data-f="level">Đánh giá</button></th></tr></thead>
+        <tbody></tbody></table></div>
+      <div class="empty-line" id="otE" hidden>Không ai cần OT theo ước tính này.</div>
+    </div>
+  </section>
+
+  <div id="tip" role="presentation"></div>
+</div>
+
+<script>
+// ---------- tính toán dùng chung ----------
+dash.calc('tasks', {
+  title: 'Issue kèm trạng thái hạn chót',
+  description: 'Mỗi issue chưa đóng, thêm số ngày trễ hạn, tuổi, số ngày chưa cập nhật và các nhóm dùng để lọc, tính đến ngày lấy dữ liệu.',
+  inputs: ['issues', 'snapshot'],
+  fn: (issues, snapshot) => {
+    const dn = (s) => Math.round(Date.parse(s + 'T00:00:00Z') / 864e5);
+    const asOf = dn(snapshot[0].as_of);
+    const defect = ['Bug', 'Bug UAT', 'Bug Production', 'Bug internal demo', 'Issue', 'Feedback Customer', 'Feedback Onsite', 'Feedback AT'];
+    const grp = (ty) => (ty === 'Task' ? 'Task' : ty.startsWith('Bug') ? 'Bug' : ty.startsWith('Feedback') ? 'Feedback' : ty === 'Issue' ? 'Issue' : 'Khác');
+    return issues.map((r) => {
+      const active = r.status !== 'Resolved';
+      const late = active && r.due && dn(r.due) < asOf ? asOf - dn(r.due) : 0;
+      return {
+        ...r,
+        ass: r.assignee || '(Chưa gán)', active: active ? 1 : 0, is_defect: defect.includes(r.type) ? 1 : 0, late,
+        age: asOf - dn(r.created), idle: asOf - dn(r.updated),
+        tg: grp(r.type), ms: r.milestone || 'Chưa có milestone', cat: r.category || 'Chưa phân loại',
+        grp: (r.defect || 'Chưa điền').replace(/^SW\d+_/, ''), prc: r.process || 'Chưa điền'
+      };
+    });
+  }
+});
+
+dash.calc('risks', {
+  title: 'Rủi ro bug và feedback',
+  description: 'Bug và feedback đang mở, chấm điểm theo mức High, trễ hạn, chưa gán, lâu không cập nhật và phản hồi khách hàng.',
+  inputs: ['tasks'],
+  fn: (tasks) => tasks.filter((t) => t.active && t.is_defect).map((t) => {
+    const flags = [];
+    let score = 0;
+    if (t.priority === 'High') { score += 3; flags.push('High'); }
+    if (t.late > 14) { score += 3; flags.push('Trễ hơn 14 ngày'); } else if (t.late > 0) { score += 1; flags.push('Trễ hạn'); }
+    if (t.ass === '(Chưa gán)') { score += 2; flags.push('Chưa gán'); }
+    if (t.idle > 14) { score += 1; flags.push('Không cập nhật hơn 14 ngày'); }
+    if (t.type.startsWith('Feedback')) { score += 1; flags.push('Phản hồi khách hàng'); }
+    return {key: t.key, summary: t.summary, assignee: t.ass, ass: t.ass, priority: t.priority, status: t.status, late: t.late, idle: t.idle, score, flags: flags.join(', '), ms: t.ms, cat: t.cat, grp: t.grp, prc: t.prc, tg: t.tg};
+  }).filter((r) => r.score >= 3).sort((a, b) => b.score - a.score || b.late - a.late)
+});
+
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const f0 = d3.format(',');
+  const f1 = d3.format(',.1f');
+  const pc = d3.format('.0%');
+  const NOONE = '(Chưa gán)';
+  const BASE = 'https://vti-corp.backlog.com/view/';
+  const TABS = ['overview', 'deadline', 'risk', 'members', 'logtime', 'ot'];
+  const TH = {overdue: [0.1, 0.25], high: [0, 10], plan: [0.8, 0.5], gap: [1, 1.2], staleDays: 7, hoursDay: 8, otDay: 4};
+  // param → field của issue. Dùng cho mọi bộ lọc.
+  const FIELDS = {who: 'ass', ms: 'ms', cat: 'cat', defect: 'grp', proc: 'prc', type: 'tg', prio: 'priority'};
+  const FLAB = {who: 'Member', ms: 'Milestone', cat: 'Category', defect: 'Nhóm lỗi', proc: 'Công đoạn', type: 'Loại', prio: 'Ưu tiên'};
+  const FSEL = {who: '#who', ms: '#f-ms', cat: '#f-cat', defect: '#f-defect', proc: '#f-proc', type: '#f-type', prio: '#f-prio'};
+  const FALL = {who: 'Cả team', ms: 'Mọi milestone', cat: 'Mọi category', defect: 'Mọi nhóm lỗi', proc: 'Mọi công đoạn', type: 'Mọi loại', prio: 'Mọi mức'};
+  const DIMS = [
+    {k: 'tg', label: 'Loại issue', p: 'type'}, {k: 'ms', label: 'Milestone', p: 'ms'}, {k: 'cat', label: 'Category', p: 'cat'},
+    {k: 'grp', label: 'Nhóm lỗi', p: 'defect'}, {k: 'prc', label: 'Công đoạn phát hiện', p: 'proc'}, {k: 'ass', label: 'Người làm', p: 'who'}
+  ];
+  const dn = (s) => Math.round(Date.parse(s + 'T00:00:00Z') / 864e5);
+  const iso = (n) => new Date(n * 864e5).toISOString().slice(0, 10);
+  const dmy = (s) => (s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '');
+  const dow = (n) => new Date(n * 864e5).getUTCDay();
+  const cnt = (a, f) => a.reduce((n, r) => n + (f(r) ? 1 : 0), 0);
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  // ---------- tooltip ----------
+  const tip = $('#tip');
+  const root = $('#pm');
+  function tipShow(ev, title, lines) {
+    tip.replaceChildren();
+    tip.append(mk('div', 'tt', title));
+    for (const l of lines) {
+      const d = mk('div', 'tl');
+      if (l.color) { const i = document.createElement('i'); i.style.background = l.color; d.append(i); }
+      d.append(document.createTextNode(l.text));
+      tip.append(d);
+    }
+    tip.style.display = 'block';
+    const b = root.getBoundingClientRect();
+    const x = Math.min(Math.max(ev.clientX - b.left + 12, 0), Math.max(0, b.width - tip.offsetWidth));
+    tip.style.left = x + 'px';
+    tip.style.top = Math.max(0, ev.clientY - b.top + 14) + 'px';
+  }
+  const tipHide = () => { tip.style.display = 'none'; };
+
+  // ---------- biểu đồ ----------
+  const AX = 'var(--cds-chart-axis)', GRID = 'var(--cds-chart-grid)', MUTED = 'var(--color-fg-muted)', REF = 'var(--cds-chart-reference)';
+  const CRIT = 'var(--cds-chart-status-critical)', DIM = 'var(--cds-chart-muted)';
+  const CAP = 'var(--cds-font-size-caption)';
+  function textW(strs, svg) {
+    const t = d3.select(svg).append('text').style('font-size', CAP);
+    let w = 0;
+    for (const s of strs) { t.text(s); w = Math.max(w, t.node().getComputedTextLength()); }
+    t.remove();
+    return w;
+  }
+  function legend(el, items) {
+    const d = mk('div', 'legend');
+    for (const it of items) {
+      const s = mk('span');
+      const i = document.createElement('i');
+      i.style.background = it.color;
+      if (it.dash) { i.style.background = 'transparent'; i.style.borderTop = '2px dashed ' + it.color; i.style.borderRadius = '0'; i.style.height = '0'; i.style.verticalAlign = '3px'; }
+      s.append(i, document.createTextNode(it.name));
+      d.append(s);
+    }
+    el.append(d);
+  }
+  const mkSvg = (el, W, H) => {
+    const svg = d3.create('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%').attr('height', H);
+    el.append(svg.node());
+    return svg;
+  };
+  const txt = (g, x, y, s, o = {}) => g.append('text').attr('x', x).attr('y', y).attr('text-anchor', o.anchor || 'start').style('fill', o.fill || MUTED).style('font-size', CAP).text(s);
+
+  // cột đứng, tùy chọn nhãn giá trị
+  function vbars(el, cats, series, o = {}) {
+    el.replaceChildren();
+    if (series.length > 1) legend(el, series.map((s) => ({name: s.name, color: s.color})));
+    const W = Math.max(280, el.clientWidth), H = o.height || 230;
+    const svg = mkSvg(el, W, H);
+    const max = d3.max(series, (s) => d3.max(s.values)) || 1;
+    const y = d3.scaleLinear().domain([0, max]).nice().range([H - 28, 16]);
+    const ticks = y.ticks(4);
+    const lw = textW(ticks.map(f0), svg.node()) + 12;
+    const x0 = d3.scaleBand().domain(cats.map((c) => c.k)).range([lw, W - 6]).paddingInner(0.28);
+    const x1 = d3.scaleBand().domain(series.map((s) => s.name)).range([0, x0.bandwidth()]).padding(0.1);
+    const g = svg.append('g');
+    for (const t of ticks) {
+      g.append('line').attr('x1', lw).attr('x2', W - 6).attr('y1', y(t)).attr('y2', y(t)).style('stroke', GRID);
+      txt(g, lw - 6, y(t) + 4, f0(t), {anchor: 'end'});
+    }
+    const step = Math.max(1, Math.ceil(cats.length / Math.max(2, Math.floor((W - lw) / 54))));
+    const showVal = x1.bandwidth() >= 16;
+    cats.forEach((c, ci) => {
+      if (ci % step === 0 || ci === cats.length - 1) txt(g, x0(c.k) + x0.bandwidth() / 2, H - 9, c.label, {anchor: 'middle'});
+      series.forEach((s) => {
+        const v = s.values[ci];
+        const h = Math.max(0, y(0) - y(v));
+        const xx = x0(c.k) + x1(s.name);
+        const col = s.fills ? s.fills[ci] : s.color;
+        g.append('rect').attr('x', xx).attr('y', y(v)).attr('width', x1.bandwidth()).attr('height', h).attr('rx', Math.min(5, x1.bandwidth() / 2)).style('fill', col)
+          .on('mousemove', (ev) => tipShow(ev, c.title || c.label, series.map((q) => ({color: q.fills ? q.fills[ci] : q.color, text: q.name + ': ' + f0(q.values[ci])}))))
+          .on('mouseleave', tipHide);
+        if (showVal && v > 0) txt(g, xx + x1.bandwidth() / 2, y(v) - 4, f0(v), {anchor: 'middle'});
+      });
+    });
+    g.append('line').attr('x1', lw).attr('x2', W - 6).attr('y1', y(0)).attr('y2', y(0)).style('stroke', AX);
+    if (o.mark) {
+      const c = cats.find((q) => q.k === o.mark.k);
+      if (c) {
+        const mx = x0(c.k) + x0.bandwidth() / 2;
+        g.append('line').attr('x1', mx).attr('x2', mx).attr('y1', 8).attr('y2', y(0)).style('stroke', REF).attr('stroke-dasharray', '4 3');
+        txt(g, Math.min(mx + 4, W - 44), 12, o.mark.text);
+      }
+    }
+  }
+
+  // đường, series có thể nét đứt; nhãn cuối đường
+  function lines(el, cats, series, o = {}) {
+    el.replaceChildren();
+    legend(el, series.map((s) => ({name: s.name, color: s.color, dash: s.dash})));
+    const W = Math.max(280, el.clientWidth), H = o.height || 230;
+    const svg = mkSvg(el, W, H);
+    const max = d3.max(series, (s) => d3.max(s.values)) || 1;
+    const y = d3.scaleLinear().domain([0, max]).nice().range([H - 28, 12]);
+    const ticks = y.ticks(4);
+    const lw = textW(ticks.map(f0), svg.node()) + 12;
+    const x = d3.scalePoint().domain(cats.map((c) => c.k)).range([lw + 8, W - 16]).padding(0.2);
+    const g = svg.append('g');
+    for (const t of ticks) {
+      g.append('line').attr('x1', lw).attr('x2', W - 6).attr('y1', y(t)).attr('y2', y(t)).style('stroke', GRID);
+      txt(g, lw - 6, y(t) + 4, f0(t), {anchor: 'end'});
+    }
+    const step = Math.max(1, Math.ceil(cats.length / Math.max(2, Math.floor((W - lw) / 54))));
+    cats.forEach((c, i) => { if (i % step === 0 || i === cats.length - 1) txt(g, x(c.k), H - 9, c.label, {anchor: 'middle'}); });
+    g.append('line').attr('x1', lw).attr('x2', W - 6).attr('y1', y(0)).attr('y2', y(0)).style('stroke', AX);
+    const gid = 'ar' + Math.random().toString(36).slice(2, 8);
+    series.forEach((s, si) => {
+      const pts = cats.map((c, i) => [x(c.k), y(s.values[i])]);
+      if (s.area && pts.length > 1) {
+        const defs = svg.append('defs');
+        const lg = defs.append('linearGradient').attr('id', gid + si).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
+        [[0, .26], [.25, .16], [.5, .08], [.75, .03], [1, 0]].forEach(([o1, a]) => lg.append('stop').attr('offset', o1).attr('style', `stop-color:${s.color};stop-opacity:${a}`));
+        g.append('path').attr('d', d3.area().x((d) => d[0]).y0(y(0)).y1((d) => d[1])(pts)).style('fill', `url(#${gid + si})`);
+      }
+      g.append('path').attr('d', d3.line()(pts)).style('fill', 'none').style('stroke', s.color).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('stroke-dasharray', s.dash ? '5 4' : null);
+      if (!s.dash && pts.length) {
+        const p = pts[pts.length - 1];
+        g.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', 3.5).style('fill', s.color);
+      }
+    });
+    // vùng bắt chuột theo cột
+    cats.forEach((c, i) => {
+      const bw = (W - lw) / cats.length;
+      g.append('rect').attr('x', x(c.k) - bw / 2).attr('y', 0).attr('width', bw).attr('height', H - 28).style('fill', 'transparent')
+        .on('mousemove', (ev) => tipShow(ev, c.title || c.label, series.map((q) => ({color: q.color, text: q.name + ': ' + f0(Math.round(q.values[i] * 10) / 10)}))))
+        .on('mouseleave', tipHide);
+    });
+  }
+
+  // thanh ngang xếp chồng; onPick(row) để lọc khi bấm
+  function hbars(el, rows, segs, o = {}) {
+    el.replaceChildren();
+    if (segs.length > 1) legend(el, segs.map((s) => ({name: s.name, color: s.color})));
+    if (!rows.length) { el.append(mk('div', 'empty-line', 'Không có dữ liệu theo bộ lọc này.')); return; }
+    const rh = o.rowH || 28;
+    const W = Math.max(280, el.clientWidth), H = rows.length * rh + 12;
+    const svg = mkSvg(el, W, H);
+    const lw = Math.min(textW(rows.map((r) => (r.label.length > 30 ? r.label.slice(0, 29) + '…' : r.label)), svg.node()) + 12, W * 0.5);
+    const tot = (r) => d3.sum(segs, (s) => r.vals[s.key] || 0);
+    const max = d3.max(rows, tot) || 1;
+    const x = d3.scaleLinear().domain([0, max]).range([lw, W - 42]);
+    const g = svg.append('g');
+    rows.forEach((r, i) => {
+      const yy = i * rh + 4;
+      const lab = r.label.length > 30 ? r.label.slice(0, 29) + '…' : r.label;
+      const on = o.active && o.active === r.label;
+      txt(g, lw - 8, yy + rh / 2 + 3, lab, {anchor: 'end', fill: on ? 'var(--color-fg)' : 'var(--color-fg)'}).style('font-weight', on ? 'var(--cds-font-weight-medium)' : null);
+      let acc = 0;
+      for (const s of segs) {
+        const v = r.vals[s.key] || 0;
+        if (v <= 0) continue;
+        const rect = g.append('rect').attr('x', x(acc)).attr('y', yy + 3).attr('width', Math.max(2, x(acc + v) - x(acc))).attr('height', rh - 9).attr('rx', 4).style('fill', s.color)
+          .style('opacity', o.active && !on ? 0.4 : 1)
+          .on('mousemove', (ev) => tipShow(ev, r.label, segs.map((q) => ({color: q.color, text: q.name + ': ' + f0(r.vals[q.key] || 0)}))))
+          .on('mouseleave', tipHide);
+        if (o.onPick) rect.attr('class', 'pick').on('click', () => o.onPick(r));
+        acc += v;
+      }
+      txt(g, x(acc) + 6, yy + rh / 2 + 3, f0(acc));
+      if (o.onPick) g.append('rect').attr('x', 0).attr('y', yy).attr('width', lw - 4).attr('height', rh).style('fill', 'transparent').attr('class', 'pick').on('click', () => o.onPick(r));
+    });
+  }
+
+  // hai thanh ngang cho mỗi dòng: a là giờ cần, b là giờ khả dụng
+  function hgroup(el, rows, leg) {
+    el.replaceChildren();
+    legend(el, leg);
+    if (!rows.length) { el.append(mk('div', 'empty-line', 'Không có dữ liệu theo bộ lọc này.')); return; }
+    const rh = 38;
+    const W = Math.max(280, el.clientWidth), H = rows.length * rh + 8;
+    const svg = mkSvg(el, W, H);
+    const lw = Math.min(textW(rows.map((r) => (r.label.length > 24 ? r.label.slice(0, 23) + '…' : r.label)), svg.node()) + 12, W * 0.45);
+    const max = d3.max(rows, (r) => Math.max(r.a, r.b)) || 1;
+    const x = d3.scaleLinear().domain([0, max]).range([lw, W - 44]);
+    const g = svg.append('g');
+    rows.forEach((r, i) => {
+      const yy = i * rh + 4;
+      txt(g, lw - 8, yy + rh / 2 + 3, r.label.length > 24 ? r.label.slice(0, 23) + '…' : r.label, {anchor: 'end', fill: 'var(--color-fg)'});
+      [[r.a, r.over ? CRIT : dash.colors[0], 'Giờ cần', 4], [r.b, DIM, 'Giờ khả dụng', 19]].forEach(([v, col, name, off]) => {
+        g.append('rect').attr('x', lw).attr('y', yy + off - 2).attr('width', Math.max(2, x(v) - lw)).attr('height', 12).attr('rx', 4).style('fill', col)
+          .on('mousemove', (ev) => tipShow(ev, r.label, [{color: col, text: name + ': ' + f0(v) + ' giờ'}]))
+          .on('mouseleave', tipHide);
+        txt(g, x(v) + 6, yy + off + 8, f0(v));
+      });
+    });
+  }
+
+  // vòng tròn; items [{label,value,color,key}]
+  function donut(el, items, o = {}) {
+    el.replaceChildren();
+    const total = d3.sum(items, (d) => d.value);
+    if (!total) { el.append(mk('div', 'empty-line', 'Không có dữ liệu theo bộ lọc này.')); return; }
+    const W = Math.max(240, el.clientWidth), S = Math.min(W, 190);
+    const svg = d3.create('svg').attr('viewBox', `0 0 ${S} ${S}`).attr('width', S).attr('height', S).style('display', 'block').style('margin', '0 auto');
+    el.append(svg.node());
+    const g = svg.append('g').attr('transform', `translate(${S / 2},${S / 2})`);
+    const arc = d3.arc().innerRadius(S * 0.32).outerRadius(S * 0.47).cornerRadius(4).padAngle(0.025);
+    for (const a of d3.pie().sort(null).value((d) => d.value)(items.filter((d) => d.value > 0))) {
+      const p = g.append('path').attr('d', arc(a)).style('fill', a.data.color)
+        .style('opacity', o.active && o.active !== a.data.key ? 0.4 : 1)
+        .on('mousemove', (ev) => tipShow(ev, a.data.label, [{color: a.data.color, text: f0(a.data.value) + ' (' + pc(a.data.value / total) + ')'}]))
+        .on('mouseleave', tipHide);
+      if (o.onPick) p.attr('class', 'pick').on('click', () => o.onPick(a.data));
+    }
+    g.append('text').attr('text-anchor', 'middle').attr('y', 5).style('fill', 'var(--color-fg)').style('font-family', 'var(--font-anthropic-serif)').style('font-size', '26px').text(f0(total));
+    g.append('text').attr('text-anchor', 'middle').attr('y', 22).style('fill', MUTED).style('font-size', CAP).text(o.center || '');
+    const lg = mk('div', 'legend');
+    lg.style.justifyContent = 'center'; lg.style.marginTop = '10px'; lg.style.marginBottom = '0';
+    for (const d of items) {
+      const s = mk('span');
+      const i = document.createElement('i');
+      i.style.background = d.color;
+      s.append(i, document.createTextNode(d.label + ' ' + f0(d.value)));
+      lg.append(s);
+    }
+    el.append(lg);
+  }
+
+  // bản đồ nhiệt: rowsL, colsL, M[r][c]
+  function heat(el, rowsL, colsL, M, o = {}) {
+    el.replaceChildren();
+    const mx = d3.max(M.flat()) || 0;
+    if (!rowsL.length || !mx) { el.append(mk('div', 'empty-line', 'Không có dữ liệu theo bộ lọc này.')); return; }
+    const W = Math.max(300, el.clientWidth), ch = 30;
+    const H = rowsL.length * ch + 40;
+    const svg = mkSvg(el, W, H);
+    const lw = Math.min(textW(rowsL.map((s) => (s.length > 26 ? s.slice(0, 25) + '…' : s)), svg.node()) + 12, W * 0.45);
+    const cw = (W - lw - 4) / colsL.length;
+    const g = svg.append('g');
+    colsL.forEach((c, j) => txt(g, lw + cw * j + cw / 2, 14, c.length > Math.max(6, cw / 7) ? c.slice(0, Math.max(5, Math.floor(cw / 7)) - 1) + '…' : c, {anchor: 'middle'}));
+    rowsL.forEach((r, i) => {
+      txt(g, lw - 8, 36 + i * ch + ch / 2 + 1, r.length > 26 ? r.slice(0, 25) + '…' : r, {anchor: 'end', fill: 'var(--color-fg)'});
+      colsL.forEach((c, j) => {
+        const v = M[i][j];
+        const pct = v ? Math.round(14 + 70 * (v / mx)) : 0;
+        g.append('rect').attr('x', lw + cw * j + 2).attr('y', 30 + i * ch + 2).attr('width', Math.max(2, cw - 4)).attr('height', ch - 4).attr('rx', 5)
+          .style('fill', v ? `color-mix(in srgb, ${o.color || dash.colors[0]} ${pct}%, transparent)` : 'color-mix(in srgb, var(--color-fg) 4%, transparent)')
+          .on('mousemove', (ev) => tipShow(ev, r + ' · ' + c, [{text: f0(v) + (o.unit || '')}]))
+          .on('mouseleave', tipHide);
+        if (v) txt(g, lw + cw * j + cw / 2, 30 + i * ch + ch / 2 + 4, f0(v), {anchor: 'middle', fill: pct > 55 ? 'var(--color-bg)' : 'var(--color-fg)'});
+      });
+    });
+  }
+
+  // ---------- bảng ----------
+  const sorts = {};
+  function pill(text, cls) { return mk('span', 'pill ' + cls, text); }
+  const statusPill = (v) => pill(v === 'Resolved' ? 'Resolved' : v === 'In Progress' ? 'Đang làm' : 'Chưa làm', v === 'Resolved' ? 'p-res' : v === 'In Progress' ? 'p-prog' : 'p-open');
+  const prioPill = (v) => pill(v, v === 'High' ? 'p-high' : 'p-open');
+  const keyLink = (v) => { const a = mk('a', 'tk', v); a.href = BASE + v; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.title = 'Mở ' + v + ' trong Backlog'; return a; };
+  const lateTag = (v) => (v > 0 ? mk('span', 'late' + (v <= 14 ? ' mid' : ''), f0(v)) : document.createTextNode(''));
+
+  function fillTable(id, cols, rows, o = {}) {
+    const tbl = $('#' + id);
+    const tb = $('tbody', tbl);
+    const st = sorts[id] || (sorts[id] = {f: o.sortF, dir: o.sortDir || -1});
+    let r = rows.slice();
+    if (st.f) {
+      const f = st.f;
+      r.sort((a, b) => {
+        const x = a[f], y = b[f];
+        const c = typeof x === 'number' && typeof y === 'number' ? x - y : String(x ?? '').localeCompare(String(y ?? ''));
+        return c * st.dir || 0;
+      });
+    }
+    if (o.limit) r = r.slice(0, o.limit);
+    tb.replaceChildren();
+    for (const row of r) {
+      const tr = document.createElement('tr');
+      if (o.keyF) tr.dataset.key = row[o.keyF];
+      if (o.pick) tr.classList.add('pick');
+      if (o.on && o.on(row)) tr.classList.add('on');
+      cols.forEach((c) => {
+        const td = document.createElement('td');
+        const v = row[c.f];
+        if (c.node) td.append(c.node(v, row));
+        else td.textContent = c.fmt ? c.fmt(v, row) : (v ?? '');
+        if (c.num) td.className = 'n';
+        if (c.cls) { const k = c.cls(v, row); if (k) td.classList.add(k); }
+        if (c.bar) td.style.background = c.bar(v, row);
+        tr.append(td);
+      });
+      tb.append(tr);
+    }
+    $$('th button', tbl).forEach((b) => {
+      b.onclick = () => {
+        const f = b.dataset.f;
+        st.dir = st.f === f ? -st.dir : (cols.find((c) => c.f === f)?.num ? -1 : 1);
+        st.f = f;
+        render();
+      };
+      b.parentElement.setAttribute('aria-sort', st.f === b.dataset.f ? (st.dir > 0 ? 'ascending' : 'descending') : 'none');
+    });
+  }
+  const colsTask = [
+    {f: 'key', node: keyLink}, {f: 'summary', cls: () => 'sum'}, {f: 'ass'}, {f: 'due', fmt: (v) => dmy(v)},
+    {f: 'late', num: true, node: lateTag}, {f: 'status', node: statusPill}, {f: 'priority', node: prioPill}
+  ];
+
+  // ---------- điều khiển ----------
+  $$('#grain button').forEach((b) => b.addEventListener('click', () => dash.setParams({grain: b.dataset.grain})));
+  $$('#tabs button').forEach((b) => b.addEventListener('click', () => dash.setParams({tab: b.dataset.tab})));
+  for (const p of Object.keys(FSEL)) $(FSEL[p]).addEventListener('change', (e) => dash.setParams({[p]: e.target.value}));
+  $('#dim').addEventListener('change', (e) => dash.setParams({dim: e.target.value}));
+  $('#rel').addEventListener('change', (e) => { const v = e.target.value; if (v && e.target.validity.valid) dash.setParams({rel: v}); });
+  $('#rel').addEventListener('blur', () => render());
+  $('#hpi').addEventListener('change', (e) => { const v = Number(e.target.value); if (v >= 0.25 && v <= 40) dash.setParams({hpi: v}); });
+  $('#hpi').addEventListener('blur', () => render());
+  const resetAll = () => dash.resetParams();
+  for (const id of ['#q-over', '#q-mem', '#q-lt']) $(id).addEventListener('input', () => render());
+  $('#t-mem tbody').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-key]');
+    if (tr) dash.setParams({who: dash.params().who === tr.dataset.key ? '' : tr.dataset.key});
+  });
+
+  const needed = ['issues', 'snapshot', 'flow', 'members'];
+  function failAll() {
+    for (const el of $$('.chart, .why, .kpi .v, .take')) el.classList.remove('dash-skeleton');
+    for (const el of $$('.chart')) { const d = mk('div', 'fail', 'Failed to load'); el.replaceChildren(d); }
+  }
+  const unskel = () => { for (const el of $$('.dash-skeleton')) el.classList.remove('dash-skeleton'); };
+  const setCard = (id, level) => { const c = $('#' + id); if (c) c.className = 'card kpi' + (level ? ' ' + level : ''); };
+  function fillSelect(sel, all, opts, cur) {
+    if (document.activeElement === sel) return;
+    const list = opts.slice();
+    if (cur && !list.some((o) => o.v === cur)) list.push({v: cur, n: 0});
+    sel.replaceChildren(new Option(all, ''), ...list.map((o) => new Option(o.v + ' (' + f0(o.n) + ')', o.v)));
+    sel.value = cur || '';
+  }
+  const rollCount = (arr, f) => [...d3.rollup(arr, (v) => v.length, f)].map(([v, n]) => ({v, n})).sort((a, b) => b.n - a.n || String(a.v).localeCompare(String(b.v)));
+
+  function render() {
+    const sts = needed.map((i) => dash.data(i).status);
+    if (sts.some((s) => ['error', 'missing', 'declined', 'connect'].includes(s))) return failAll();
+    if (sts.some((s) => s !== 'ok')) return;
+    const tasksD = dash.data('tasks');
+    if (tasksD.status !== 'ok') return;
+    unskel();
+    const tasks = tasksD.data;
+    const risks = dash.data('risks').data;
+    const flow = dash.data('flow').data;
+    const members = dash.data('members').data;
+    const snap = dash.data('snapshot').data[0];
+    const P = dash.params();
+    const grain = ['day', 'week', 'month'].includes(P.grain) ? P.grain : 'week';
+    const tab = TABS.includes(P.tab) ? P.tab : 'overview';
+    const dim = DIMS.find((d) => d.k === P.dim) || DIMS[0];
+    const hpi = Number(P.hpi) >= 0.25 ? Number(P.hpi) : 2;
+    const asN = dn(snap.as_of);
+    const F = {};
+    for (const p of Object.keys(FIELDS)) F[p] = P[p] || '';
+    const pass = (t, skip) => { for (const p of Object.keys(FIELDS)) { if (p === skip) continue; if (F[p] && t[FIELDS[p]] !== F[p]) return false; } return true; };
+    const setF = (p, v) => dash.setParams({[p]: F[p] === v ? '' : v});
+
+    const dueFuture = tasks.filter((t) => t.active && t.due && dn(t.due) >= asN).map((t) => dn(t.due));
+    const relDef = dueFuture.length ? Math.max(...dueFuture) : asN + 14;
+    const relN = P.rel && /^\d{4}-\d{2}-\d{2}$/.test(P.rel) ? dn(P.rel) : relDef;
+
+    // tab, kỳ, ngày release
+    $$('#tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+    TABS.forEach((t) => { $('#' + t).hidden = t !== tab; });
+    $$('#grain button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.grain === grain)));
+    if (document.activeElement !== $('#rel')) $('#rel').value = iso(relN);
+    if (document.activeElement !== $('#hpi')) $('#hpi').value = hpi;
+
+    // bộ lọc: tùy chọn lấy từ dữ liệu, đếm theo việc đang mở khi các bộ lọc khác đã áp
+    for (const p of Object.keys(FIELDS)) {
+      const base = tasks.filter((t) => t.active && pass(t, p));
+      const opts = rollCount(base, (t) => t[FIELDS[p]]);
+      fillSelect($(FSEL[p]), FALL[p], opts, F[p]);
+    }
+    if (document.activeElement !== $('#dim')) { $('#dim').replaceChildren(...DIMS.map((d) => new Option(d.label, d.k))); $('#dim').value = dim.k; }
+    const chips = $('#chips');
+    chips.replaceChildren();
+    const activeF = Object.keys(FIELDS).filter((p) => F[p]);
+    for (const p of activeF) {
+      const c = mk('button', 'chip');
+      c.type = 'button';
+      c.append(mk('b', null, FLAB[p] + ':'), document.createTextNode(' ' + F[p] + ' ×'));
+      c.title = 'Bỏ bộ lọc này';
+      c.onclick = () => dash.setParams({[p]: ''});
+      chips.append(c);
+    }
+    if (activeF.length) {
+      const b = mk('button', 'btn', 'Xóa mọi bộ lọc');
+      b.type = 'button';
+      b.onclick = () => dash.setParams(Object.fromEntries(activeF.map((p) => [p, ''])));
+      chips.append(b);
+    } else chips.append(mk('span', 'note', 'Chưa lọc: đang xem toàn dự án. Chọn milestone, nhóm lỗi hoặc member ở trên, hoặc bấm trực tiếp vào biểu đồ.'));
+    const rb = mk('button', 'btn', 'Đặt lại mặc định');
+    rb.type = 'button';
+    rb.onclick = resetAll;
+    chips.append(rb);
+
+    // dữ liệu theo bộ lọc
+    const rows = tasks.filter((t) => pass(t));
+    const act = rows.filter((t) => t.active);
+    const overdue = act.filter((t) => t.late > 0);
+    const withDue = act.filter((t) => t.due);
+    const defects = act.filter((t) => t.is_defect);
+    const high = defects.filter((t) => t.priority === 'High');
+    const resolved = rows.filter((t) => !t.active);
+    const staleRes = resolved.filter((t) => t.idle > TH.staleDays);
+    const unassigned = rows.filter((t) => t.active && t.ass === NOONE);
+    const inprog = cnt(act, (t) => t.status === 'In Progress');
+
+    // luồng theo kỳ (toàn dự án)
+    const fl = flow.filter((r) => r.grain === grain).sort((a, b) => a.period.localeCompare(b.period));
+    const cur = fl[fl.length - 1], prev = fl[fl.length - 2];
+    const gName = {day: 'Hôm nay', week: 'Tuần này', month: 'Tháng này'}[grain];
+    const gPrev = {day: 'hôm qua', week: 'tuần trước', month: 'tháng trước'}[grain];
+
+    // ngày làm việc còn lại và tốc độ đóng (toàn đội)
+    let W = 0;
+    for (let d = asN + 1; d <= relN; d++) { const w = dow(d); if (w !== 0 && w !== 6) W++; }
+    const wd = flow.filter((r) => r.grain === 'day' && dn(r.period) <= asN && ![0, 6].includes(dow(dn(r.period)))).sort((a, b) => a.period.localeCompare(b.period)).slice(-5);
+    const rate = wd.length ? d3.sum(wd, (r) => r.closed) / wd.length : 0;
+    const inScope = (t) => t.active && (t.is_defect || (t.due && dn(t.due) <= relN));
+    const scopeTeam = tasks.filter(inScope);
+    const scopeAll = rows.filter(inScope);
+    const need = W > 0 ? scopeTeam.length / W : scopeTeam.length;
+    const gap = rate > 0 ? need / rate : 0;
+    const workers = new Set(tasks.filter((t) => t.active && t.ass !== NOONE).map((t) => t.ass)).size;
+    const cap = workers ? rate / workers : 0;
+
+    // header
+    const filt = activeF.length ? ' (theo bộ lọc hiện tại)' : '';
+    $('#take').textContent = activeF.length
+      ? f0(act.length) + ' việc đang mở' + filt + ': ' + f0(overdue.length) + ' quá hạn, ' + f0(high.length) + ' bug và feedback mức High. Các biểu đồ tạo mới, đóng và tốc độ vẫn là số toàn dự án.'
+      : f0(overdue.length) + ' issue quá hạn và ' + f0(high.length) + ' bug, feedback mức High đang mở. Để kịp release ' + dmy(iso(relN)) + ' cần đóng ' + f0(Math.round(need)) + ' việc mỗi ngày làm việc, trong khi tốc độ gần đây là ' + f0(Math.round(rate)) + '.';
+    $('#asof').textContent = 'Dữ liệu Backlog ngày ' + dmy(snap.as_of) + '/' + snap.as_of.slice(0, 4);
+
+    // ---------- TỔNG QUAN ----------
+    $('#k1').textContent = f0(act.length);
+    $('#k1s').textContent = f0(inprog) + ' đang làm, ' + f0(act.length - inprog) + ' chưa bắt đầu';
+    $('#k2').textContent = f0(overdue.length);
+    setCard('k2c', overdue.length ? 'bad' : 'ok');
+    $('#k2s').textContent = withDue.length ? pc(overdue.length / withDue.length) + ' trong ' + f0(withDue.length) + ' issue có hạn' : 'Chưa issue nào có hạn';
+    $('#k3').textContent = f0(defects.length);
+    $('#k3s').textContent = f0(high.length) + ' mức High';
+    $('#k4').textContent = f0(resolved.length);
+    $('#k4s').textContent = f0(staleRes.length) + ' chờ hơn ' + TH.staleDays + ' ngày';
+    $('#k5').textContent = f0(unassigned.length);
+    $('#k5s').textContent = unassigned.length ? 'Cần gán người trước khi release' : 'Mọi việc đã có người làm';
+    $('#k6l').textContent = 'Đã đóng · ' + gName.toLowerCase();
+    $('#k6').textContent = cur ? f0(cur.closed) : '';
+    const d6 = cur && prev ? cur.closed - prev.closed : 0;
+    $('#k6s').textContent = cur ? 'Tạo mới ' + f0(cur.created) + (prev ? ' · so với ' + gPrev + ' ' + (d6 >= 0 ? '+' : '') + f0(d6) : '') : '';
+
+    const od = withDue.length ? overdue.length / withDue.length : 0;
+    const lamp = (id, level, text) => { $('#' + id + 'd').className = 'dot ' + level; $('#' + id + 't').textContent = text; };
+    lamp('r1', od >= TH.overdue[1] ? 'red' : od >= TH.overdue[0] ? 'amber' : 'green', pc(od) + ' issue có hạn đang quá hạn (' + f0(overdue.length) + ' trên ' + f0(withDue.length) + ').');
+    lamp('r2', high.length > TH.high[1] ? 'red' : high.length > TH.high[0] ? 'amber' : 'green', f0(high.length) + ' bug và feedback High chưa xử lý; ' + pc(snap.bugs_closed / snap.bugs_total) + ' bug toàn dự án đã đóng.');
+    lamp('r3', gap > TH.gap[1] ? 'red' : gap > TH.gap[0] ? 'amber' : 'green', 'Cả team cần ' + f0(Math.round(need)) + ' việc mỗi ngày so với ' + f0(Math.round(rate)) + ' thực tế gần đây, còn ' + f0(W) + ' ngày làm việc.');
+    const actAll = tasks.filter((t) => t.active && !t.is_defect);
+    const planned = actAll.length ? cnt(actAll, (t) => t.due) / actAll.length : 0;
+    lamp('r4', planned < TH.plan[1] ? 'red' : planned < TH.plan[0] ? 'amber' : 'green', 'Cả team: ' + pc(planned) + ' task đang mở có hạn chót; ' + f0(snap.est_filled) + ' trên ' + f0(snap.issues_in_scope) + ' issue có giờ ước tính.');
+    $('#rules').replaceChildren(...[
+      'Các đèn tính trên toàn dự án, trừ đèn Tiến độ và Chất lượng áp theo bộ lọc.',
+      'Tiến độ: vàng khi quá hạn từ ' + pc(TH.overdue[0]) + ' số issue có hạn, đỏ từ ' + pc(TH.overdue[1]) + '.',
+      'Chất lượng: vàng khi có bug hoặc feedback High đang mở, đỏ khi nhiều hơn ' + TH.high[1] + '.',
+      'Nguồn lực: so việc cần xong mỗi ngày với tốc độ đóng 5 ngày làm việc gần nhất; vàng khi vượt, đỏ khi vượt hơn ' + pc(TH.gap[1] - 1) + '.',
+      'Dữ liệu kế hoạch: vàng khi dưới ' + pc(TH.plan[0]) + ' task có hạn chót, đỏ khi dưới ' + pc(TH.plan[1]) + '.',
+      'Việc cần xong trước release gồm mọi bug và feedback đang mở, cộng task có hạn chót không muộn hơn ngày release.'
+    ].map((t) => mk('li', null, t)));
+
+    if (tab === 'overview') {
+      const gl = {day: 'ngày', week: 'tuần', month: 'tháng'}[grain];
+      $('#flowT').textContent = 'Tạo mới và đóng theo ' + gl;
+      const ctitle = (r) => (grain === 'week' ? 'Tuần từ ' : grain === 'month' ? 'Tháng ' : 'Ngày ') + r.label;
+      vbars($('#c-flow'), fl.map((r) => ({k: r.period, label: r.label, title: ctitle(r)})), [
+        {name: 'Tạo mới', color: dash.colors[1], values: fl.map((r) => r.created)},
+        {name: 'Đã đóng', color: dash.colors[0], values: fl.map((r) => r.closed)}
+      ]);
+      const perP = {day: 1, week: 5, month: 21}[grain];
+      lines($('#c-pace'), fl.map((r) => ({k: r.period, label: r.label, title: ctitle(r)})), [
+        {name: 'Đã đóng', color: dash.colors[0], values: fl.map((r) => r.closed), area: true},
+        {name: 'Cần đóng mỗi ' + gl + ' để kịp release', color: CRIT, dash: true, values: fl.map(() => need * perP)}
+      ]);
+      const stSegs = [['Open', 'Chưa làm', dash.colors[1]], ['In Progress', 'Đang làm', dash.colors[0]], ['Resolved', 'Resolved', DIM]];
+      donut($('#c-status'), stSegs.map(([k, l, c]) => ({key: k, label: l, color: c, value: cnt(rows, (t) => t.status === k)})), {center: 'issue'});
+      const fk = dim.k;
+      const grouped = d3.rollup(rows, (v) => v, (t) => t[fk]);
+      let dr = [...grouped].map(([label, v]) => ({label, vals: {Open: cnt(v, (t) => t.status === 'Open'), 'In Progress': cnt(v, (t) => t.status === 'In Progress'), Resolved: cnt(v, (t) => t.status === 'Resolved')}}));
+      dr.sort((a, b) => d3.sum(Object.values(b.vals)) - d3.sum(Object.values(a.vals)));
+      dr = dr.slice(0, 12);
+      hbars($('#c-dim'), dr, stSegs.map(([k, l, c]) => ({key: k, name: l, color: c})), {rowH: 30, active: F[dim.p], onPick: (r) => setF(dim.p, r.label)});
+    }
+
+    // ---------- DEADLINE ----------
+    if (tab === 'deadline') {
+      const buckets = [['1-7 ngày', 1, 7], ['8-14 ngày', 8, 14], ['15-30 ngày', 15, 30], ['Trên 30 ngày', 31, 99999]];
+      const bv = buckets.map(([, a, b]) => cnt(overdue, (t) => t.late >= a && t.late <= b));
+      vbars($('#c-aging'), buckets.map((b) => ({k: b[0], label: b[0]})), [{name: 'Issue quá hạn', color: dash.colors[0], values: bv, fills: bv.map((v, i) => (i >= 2 ? CRIT : dash.colors[0]))}]);
+      const days = [];
+      for (let d = asN; d <= Math.max(asN + 7, relN); d++) days.push(d);
+      const dv = days.map((d) => cnt(act, (t) => t.due && dn(t.due) === d));
+      const dnames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+      vbars($('#c-due'), days.map((d) => ({k: String(d), label: dnames[dow(d)] + ' ' + dmy(iso(d)), title: dmy(iso(d))})), [{name: 'Đến hạn', color: dash.colors[0], values: dv}], {mark: {k: String(relN), text: 'Release'}});
+      const dowM = (dow(asN) + 6) % 7;
+      const dd = new Date(asN * 864e5);
+      const bnd = grain === 'day' ? [asN, asN] : grain === 'week' ? [asN - dowM, asN - dowM + 6] : [Date.UTC(dd.getUTCFullYear(), dd.getUTCMonth(), 1) / 864e5, Date.UTC(dd.getUTCFullYear(), dd.getUTCMonth() + 1, 0) / 864e5];
+      const inP = act.filter((t) => t.due && dn(t.due) >= bnd[0] && dn(t.due) <= bnd[1]);
+      $('#dueT').textContent = 'Đến hạn ' + gName.toLowerCase();
+      $('#dueN').textContent = 'Từ ' + dmy(iso(bnd[0])) + ' đến ' + dmy(iso(bnd[1])) + ': ' + f0(inP.length) + ' issue chưa xong, trong đó ' + f0(cnt(inP, (t) => t.late > 0)) + ' đã quá hạn.';
+      fillTable('t-due', colsTask, inP, {sortF: 'due', sortDir: 1, keyF: 'key', limit: 200});
+      $('#dueE').hidden = inP.length > 0;
+      $('#t-due').parentElement.hidden = inP.length === 0;
+      const q = $('#q-over').value.trim().toLowerCase();
+      const ov = q ? overdue.filter((t) => (t.key + ' ' + t.summary + ' ' + t.ass).toLowerCase().includes(q)) : overdue;
+      fillTable('t-over', colsTask, ov, {sortF: 'late', sortDir: -1, keyF: 'key', limit: 300});
+      $('#overE').hidden = ov.length > 0;
+      $('#t-over').parentElement.hidden = ov.length === 0;
+    }
+
+    // ---------- ISSUE VÀ RỦI RO ----------
+    if (tab === 'risk') {
+      const cl = snap.bugs_total ? snap.bugs_closed / snap.bugs_total : 0;
+      const fb = act.filter((t) => t.type.startsWith('Feedback'));
+      $('#b1').textContent = f0(defects.length);
+      $('#b1s').textContent = f0(cnt(defects, (t) => t.late > 0)) + ' đã quá hạn';
+      $('#b2').textContent = f0(high.length);
+      setCard('b2c', high.length ? 'bad' : 'ok');
+      $('#b2s').textContent = f0(cnt(high, (t) => t.ass === NOONE)) + ' chưa gán người';
+      $('#b3').textContent = pc(cl);
+      $('#b3s').textContent = f0(snap.bugs_closed) + ' trên ' + f0(snap.bugs_total) + ' bug, toàn dự án';
+      $('#b4').textContent = f0(fb.length);
+      $('#b4s').textContent = f0(cnt(fb, (t) => t.late > 0)) + ' đã quá hạn';
+      const bugs = act.filter((t) => t.type.startsWith('Bug'));
+      const grp = (key) => [...d3.rollup(bugs, (v) => v.length, (t) => t[key])].sort((a, b) => b[1] - a[1]).map(([label, n]) => ({label, vals: {n}}));
+      const one = [{key: 'n', name: 'Bug', color: dash.colors[0]}];
+      hbars($('#c-cat'), grp('grp'), one, {active: F.defect, onPick: (r) => setF('defect', r.label)});
+      hbars($('#c-proc'), grp('prc'), one, {active: F.proc, onPick: (r) => setF('proc', r.label)});
+      const gl = [...d3.rollup(bugs, (v) => v.length, (t) => t.grp)].sort((a, b) => b[1] - a[1]).map((x) => x[0]).slice(0, 8);
+      const pl = [...d3.rollup(bugs, (v) => v.length, (t) => t.prc)].sort((a, b) => b[1] - a[1]).map((x) => x[0]).slice(0, 6);
+      heat($('#c-heat'), gl, pl, gl.map((g1) => pl.map((p1) => cnt(bugs, (t) => t.grp === g1 && t.prc === p1))), {unit: ' bug', color: 'var(--cds-chart-status-critical)'});
+      const prItems = [['High', 'High', CRIT], ['Normal', 'Normal', dash.colors[0]], ['Low', 'Low', DIM]].map(([k, l, c]) => ({key: k, label: l, color: c, value: cnt(defects, (t) => t.priority === k)}));
+      donut($('#c-prio'), prItems, {center: 'bug và FB', active: F.prio, onPick: (d) => setF('prio', d.key)});
+      const rb = [['Tới 3 ngày', 0, 3], ['4-7 ngày', 4, 7], ['8-30 ngày', 8, 30], ['Trên 30 ngày', 31, 99999]];
+      const rv = rb.map(([, a, b]) => cnt(resolved, (t) => t.idle >= a && t.idle <= b));
+      vbars($('#c-res'), rb.map((b) => ({k: b[0], label: b[0]})), [{name: 'Resolved', color: dash.colors[0], values: rv, fills: rv.map((v, i) => (i >= 2 ? CRIT : dash.colors[0]))}]);
+      const wk = (n) => n - ((dow(n) + 6) % 7);
+      const wkNow = wk(asN);
+      const wks = d3.range(-9, 1).map((i) => wkNow + i * 7);
+      const nv = wks.map((w) => cnt(bugs, (t) => wk(dn(t.created)) === w));
+      vbars($('#c-new'), wks.map((w) => ({k: String(w), label: dmy(iso(w)), title: 'Tuần từ ' + dmy(iso(w))})), [{name: 'Bug mới còn mở', color: dash.colors[1], values: nv}], {height: 220});
+      const rr = risks.filter((r) => pass(r));
+      fillTable('t-risk', [{f: 'key', node: keyLink}, {f: 'summary', cls: () => 'sum'}, {f: 'assignee'}, {f: 'priority', node: prioPill}, {f: 'status', node: statusPill}, {f: 'late', num: true, node: lateTag}, {f: 'score', num: true}, {f: 'flags'}], rr, {sortF: 'score', sortDir: -1, keyF: 'key', limit: 20});
+      $('#riskE').hidden = rr.length > 0;
+      $('#t-risk').parentElement.hidden = rr.length === 0;
+    }
+
+    // tải theo member, bỏ bộ lọc member để danh sách không bị thu lại
+    const memberLoad = () => {
+      const blank = (name, role) => ({name, role, active: 0, in_progress: 0, overdue: 0, defects: 0, high: 0, resolved: 0});
+      const m = new Map(members.map((x) => [x.name, blank(x.name, x.role)]));
+      for (const t of tasks.filter((x) => pass(x, 'who'))) {
+        if (!m.has(t.ass)) m.set(t.ass, blank(t.ass, ''));
+        const o = m.get(t.ass);
+        if (!t.active) { o.resolved++; continue; }
+        o.active++;
+        if (t.status === 'In Progress') o.in_progress++;
+        if (t.late > 0) o.overdue++;
+        if (t.is_defect) { o.defects++; if (t.priority === 'High') o.high++; }
+      }
+      return [...m.values()].sort((a, b) => b.active - a.active || a.name.localeCompare(b.name));
+    };
+
+    // ---------- MEMBER ----------
+    if (tab === 'members') {
+      const ml = memberLoad();
+      const people = ml.filter((m) => m.name !== NOONE);
+      const busy = people.filter((m) => m.active > 0);
+      const top = busy[0];
+      $('#m1').textContent = f0(members.length);
+      $('#m1s').textContent = f0(cnt(members, (m) => m.role === 'Admin')) + ' quản trị viên';
+      $('#m2').textContent = f0(busy.length);
+      $('#m2s').textContent = f0(people.length - busy.length) + ' người chưa có việc mở';
+      $('#m3').textContent = f0(cnt(people, (m) => m.overdue > 0));
+      setCard('m3c', cnt(people, (m) => m.overdue > 0) ? 'warn' : 'ok');
+      $('#m3s').textContent = 'Tổng ' + f0(d3.sum(people, (m) => m.overdue)) + ' issue quá hạn';
+      $('#m4').textContent = top ? f0(top.active) : '';
+      $('#m4s').textContent = top ? top.name : '';
+      const t15 = ml.filter((m) => m.active > 0).slice(0, 15).map((m) => ({label: m.name, vals: {ok: m.active - m.overdue, late: m.overdue}}));
+      hbars($('#c-mem'), t15, [{key: 'ok', name: 'Trong hạn hoặc chưa có hạn', color: dash.colors[0]}, {key: 'late', name: 'Quá hạn', color: CRIT}], {rowH: 28, active: F.who, onPick: (r) => setF('who', r.label)});
+      const q = $('#q-mem').value.trim().toLowerCase();
+      const mrows = q ? ml.filter((m) => m.name.toLowerCase().includes(q)) : ml;
+      const mx = d3.max(ml, (m) => m.active) || 1;
+      fillTable('t-mem', [
+        {f: 'name'}, {f: 'role'},
+        {f: 'active', num: true, bar: (v) => `linear-gradient(90deg, color-mix(in srgb, ${dash.colors[0]} 28%, transparent) ${(v / mx) * 100}%, transparent ${(v / mx) * 100}%)`},
+        {f: 'in_progress', num: true}, {f: 'overdue', num: true, cls: (v) => (v > 0 ? 'hot' : '')}, {f: 'defects', num: true}, {f: 'high', num: true}, {f: 'resolved', num: true}
+      ], mrows, {sortF: 'active', sortDir: -1, keyF: 'name', pick: true, limit: 300, on: (r) => r.name === F.who});
+    }
+
+    // ---------- LOGTIME ----------
+    if (tab === 'logtime') {
+      const scopeNo = tasks.filter((t) => pass(t, 'who') && inScope(t));
+      const estSum = d3.sum(scopeNo, (t) => t.est);
+      const actSum = d3.sum(rows, (t) => t.act);
+      const withAct = cnt(rows, (t) => t.act > 0);
+      const withEst = cnt(scopeNo, (t) => t.est > 0);
+      const hoursOf = (t) => (t.est > 0 ? t.est : hpi);
+      const needSum = d3.sum(scopeNo, hoursOf);
+      const byM = d3.rollup(scopeNo, (v) => v, (t) => t.ass);
+      const logRows = [...byM].filter(([n]) => n !== NOONE).map(([name, v]) => {
+        const nd = d3.sum(v, hoursOf);
+        const cp = W * TH.hoursDay;
+        return {name, open: v.length, est: d3.sum(v, (t) => t.est), act: d3.sum(rows.filter((t) => t.ass === name), (t) => t.act), need: nd, cap: cp, util: cp ? nd / cp : 0};
+      });
+      const capTotal = W * TH.hoursDay * Math.max(1, logRows.length);
+      const util = capTotal ? d3.sum(logRows, (r) => r.need) / capTotal : 0;
+      const over = logRows.filter((r) => r.util > 1);
+      $('#lt-note').replaceChildren(
+        mk('b', null, 'Về dữ liệu logtime. '),
+        document.createTextNode('Backlog chỉ có trường "Actual Hours" trên từng issue, không có bảng chấm công theo người và theo ngày. Hiện ' + f0(withAct) + ' trên ' + f0(rows.length) + ' issue có giờ thực tế và ' + f0(withEst) + ' trên ' + f0(scopeNo.length) + ' việc phải xong có giờ ước tính, nên chưa thể báo cáo giờ thực làm của từng người. Tab này vì vậy so giờ cần (giờ ước tính, hoặc giả định bên dưới nếu thiếu) với giờ khả dụng đến ngày release, và có thêm biểu đồ hoạt động làm chỉ báo gián tiếp. Để có logtime thật, cần team điền Actual Hours khi đóng issue, hoặc đính kèm file chấm công để nối vào đây.')
+      );
+      $('#l1').textContent = f0(Math.round(estSum)) + ' giờ';
+      $('#l1s').textContent = f0(withEst) + ' trên ' + f0(scopeNo.length) + ' việc phải xong có ước tính';
+      $('#l2').textContent = f0(Math.round(actSum)) + ' giờ';
+      setCard('l2c', withAct / Math.max(1, rows.length) < 0.5 ? 'warn' : 'ok');
+      $('#l2s').textContent = f0(withAct) + ' trên ' + f0(rows.length) + ' issue có giờ thực tế (' + pc(withAct / Math.max(1, rows.length)) + ')';
+      $('#l3').textContent = f0(Math.round(needSum)) + ' giờ';
+      $('#l3s').textContent = 'Việc phải xong × ' + f1(hpi) + ' giờ nếu thiếu ước tính';
+      $('#l4').textContent = f0(Math.round(capTotal)) + ' giờ';
+      $('#l4s').textContent = f0(logRows.length) + ' người × ' + f0(W) + ' ngày × ' + TH.hoursDay + ' giờ';
+      $('#l5').textContent = pc(util);
+      setCard('l5c', util > 1 ? 'bad' : util > 0.85 ? 'warn' : 'ok');
+      $('#l5s').textContent = f0(over.length) + ' người vượt 100% khả dụng';
+
+      const topCap = logRows.slice().sort((a, b) => b.need - a.need).slice(0, 14);
+      hgroup($('#c-cap'), topCap.map((r) => ({label: r.name, a: Math.round(r.need), b: Math.round(r.cap), over: r.util > 1})), [{name: 'Giờ cần', color: dash.colors[0]}, {name: 'Giờ cần (vượt khả dụng)', color: CRIT}, {name: 'Giờ khả dụng', color: DIM}]);
+      // hoạt động theo tuần
+      const wk = (n) => n - ((dow(n) + 6) % 7);
+      const wkNow = wk(asN);
+      const wks = d3.range(-5, 1).map((i) => wkNow + i * 7);
+      const pool = tasks.filter((t) => pass(t, 'who') && t.ass !== NOONE);
+      const bm = d3.rollup(pool, (v) => v, (t) => t.ass);
+      const act2 = [...bm].map(([name, v]) => ({name, cells: wks.map((w) => cnt(v, (t) => wk(dn(t.updated)) === w))})).filter((r) => d3.sum(r.cells) > 0).sort((a, b) => d3.sum(b.cells) - d3.sum(a.cells)).slice(0, 14);
+      heat($('#c-act'), act2.map((r) => r.name), wks.map((w) => dmy(iso(w))), act2.map((r) => r.cells), {unit: ' issue cập nhật'});
+      const q = $('#q-lt').value.trim().toLowerCase();
+      const lr = q ? logRows.filter((r) => r.name.toLowerCase().includes(q)) : logRows;
+      $('#ltN').textContent = 'Giờ cần = giờ ước tính của từng việc, hoặc ' + f1(hpi) + ' giờ nếu chưa có. Giờ khả dụng = ' + f0(W) + ' ngày làm việc × ' + TH.hoursDay + ' giờ, chưa trừ họp và nghỉ phép.';
+      fillTable('t-lt', [
+        {f: 'name'}, {f: 'open', num: true}, {f: 'est', num: true, fmt: (v) => (v ? f1(v) : '')}, {f: 'act', num: true, fmt: (v) => (v ? f1(v) : '')},
+        {f: 'need', num: true, fmt: (v) => f0(Math.round(v))}, {f: 'cap', num: true, fmt: (v) => f0(v)},
+        {f: 'util', num: true, fmt: (v) => pc(v), cls: (v) => (v > 1 ? 'hot' : '')}
+      ], lr, {sortF: 'util', sortDir: -1, limit: 300});
+    }
+
+    // ---------- OT ----------
+    if (tab === 'ot') {
+      const by = d3.rollup(scopeAll, (v) => v.length, (t) => t.ass);
+      const otRows = [...by].filter(([n]) => n !== NOONE).map(([name, scopeN]) => {
+        const days = cap > 0 ? scopeN / cap : 0;
+        const extra = Math.max(0, days - W);
+        const hours = Math.round(extra * TH.hoursDay);
+        const maxh = W * TH.otDay;
+        const level = hours === 0 ? 'Ổn' : hours <= maxh ? 'Cần OT' : 'Vượt khả năng OT';
+        return {name, scope: scopeN, perday: W > 0 ? scopeN / W : scopeN, hours, maxh, level};
+      });
+      const needOt = otRows.filter((r) => r.hours > 0);
+      const over = otRows.filter((r) => r.level === 'Vượt khả năng OT');
+      $('#o1').textContent = f0(W);
+      $('#o1s').textContent = 'Đến ' + dmy(iso(relN)) + ', không tính T7 và CN';
+      $('#o2').textContent = f0(scopeAll.length);
+      $('#o2s').textContent = f0(cnt(scopeAll, (t) => t.ass === NOONE)) + ' chưa có người làm';
+      $('#o3').textContent = f0(Math.round(need));
+      setCard('o3c', gap > TH.gap[1] ? 'bad' : gap > TH.gap[0] ? 'warn' : 'ok');
+      $('#o3s').textContent = 'Việc mỗi ngày làm việc, cả team';
+      $('#o4').textContent = f0(Math.round(rate));
+      $('#o4s').textContent = 'Trung bình ' + f0(wd.length) + ' ngày làm việc gần nhất';
+      $('#o5').textContent = f0(needOt.length);
+      setCard('o5c', over.length ? 'bad' : needOt.length ? 'warn' : 'ok');
+      $('#o5s').textContent = f0(over.length) + ' người vượt khả năng OT, cần chia lại việc';
+      $('#o6').textContent = f0(d3.sum(needOt, (r) => r.hours)) + ' giờ';
+      $('#o6s').textContent = 'Ước tính, tối đa ' + TH.otDay + ' giờ mỗi ngày mỗi người';
+      $('#otN').textContent = 'Giả định: mỗi người đóng được ' + (cap ? cap.toFixed(1) : '0') + ' việc mỗi ngày (tốc độ đóng gần đây chia cho số người đang có việc), ' + TH.hoursDay + ' giờ mỗi ngày công. Việc phải xong gồm bug, feedback và task có hạn không muộn hơn ngày release' + (activeF.length ? ', theo bộ lọc hiện tại' : '') + '.';
+      fillTable('t-ot', [
+        {f: 'name'}, {f: 'scope', num: true}, {f: 'perday', num: true, fmt: (v) => v.toFixed(1)}, {f: 'hours', num: true, fmt: (v) => (v ? f0(v) : '')},
+        {f: 'maxh', num: true}, {f: 'level', cls: (v) => (v === 'Vượt khả năng OT' ? 'hot' : '')}
+      ], otRows, {sortF: 'hours', sortDir: -1, limit: 60});
+      $('#otE').hidden = otRows.length > 0;
+      $('#t-ot').parentElement.hidden = otRows.length === 0;
+    }
+  }
+
+  dash.onData(render);
+})();
+</script>
+
+</div>
+</body>
+</html>
